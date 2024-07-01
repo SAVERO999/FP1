@@ -9,7 +9,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 
-df = pd.read_csv('dataecgvannofix.txt', sep='\s+', header=None)
+df = pd.read_csv('dataecginofix1.txt', sep='\s+', header=None)
 ecg_signal = df[df.columns[0]]
 
 # Calculate the number of samples
@@ -895,8 +895,8 @@ if selected == "Frekuensi Domain":
             
             # Loop for 7 subsets
             for i in range(7):
-                start_index = i * 20
-                end_index = start_index + 20
+                start_index = i * 37
+                end_index = start_index + 37
             
                 n_subset = n[start_index:end_index]
                 bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
@@ -953,8 +953,8 @@ if selected == "Frekuensi Domain":
                 
                 # Loop for 7 subsets
                 for i in range(7):
-                    start_index = i * 20
-                    end_index = start_index + 20
+                    start_index = i * 37
+                    end_index = start_index + 37
                 
                     n_subset = n[start_index:end_index]
                     bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
@@ -1023,8 +1023,8 @@ if selected == "Frekuensi Domain":
                 
                 # Loop for 7 subsets
                 for i in range(7):
-                    start_index = i * 20
-                    end_index = start_index + 20
+                    start_index = i * 37
+                    end_index = start_index + 37
                 
                     n_subset = n[start_index:end_index]
                     bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
