@@ -9,7 +9,7 @@ from plotly.subplots import make_subplots
 import plotly.express as px
 
 
-df = pd.read_csv('dataecginofix1.txt', sep='\s+', header=None)
+df = pd.read_csv('dataecgnonofix1.txt', sep='\s+', header=None)
 ecg_signal = df[df.columns[0]]
 
 # Calculate the number of samples
@@ -308,8 +308,8 @@ colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'pink']
 
 # Loop for 7 subsets
 for i in range(7):
-    start_index = i * 37
-    end_index = start_index + 37
+    start_index = i * 20
+    end_index = start_index + 320
 
     n_subset = n[start_index:end_index]
     bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
@@ -879,6 +879,46 @@ if selected == "Frekuensi Domain":
           optimizer_options = ['', 'Tachogram', 'Windowing','fft']
           selected_optimizer = st.selectbox('Segmentation', optimizer_options)
           if selected_optimizer == 'Tachogram':  
+            def fourier_transform(signal):
+                N = len(signal)
+                fft_result = np.zeros(N, dtype=complex)
+                for k in range(N):
+                    for n in range(N):
+                        fft_result[k] += signal[n] * np.exp(-2j * np.pi * k * n / N)
+                return fft_result
+            def calculate_frequency(N, sampling_rate):
+                return np.arange(N) * sampling_rate / N
+            
+            sampling_rate = 1  # Example sampling rate
+            
+            fft_results_dict = {}
+            
+            # Loop for 7 subsets
+            for i in range(7):
+                start_index = i * 20
+                end_index = start_index + 20
+            
+                n_subset = n[start_index:end_index]
+                bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
+            
+                M = len(bpm_rr_baseline_subset) - 1
+            
+                hamming_window = np.zeros(M + 1)
+                for j in range(M + 1):
+                    hamming_window[j] = 0.54 - 0.46 * np.cos(2 * np.pi * j / M)
+            
+                bpm_rr_baseline_windowed = bpm_rr_baseline_subset * hamming_window
+            
+                fft_result = fourier_transform(bpm_rr_baseline_windowed)
+                fft_freq = calculate_frequency(len(bpm_rr_baseline_windowed), sampling_rate)
+            
+                half_point = len(fft_freq) // 2
+                fft_freq_half = fft_freq[:half_point]
+                fft_result_half = fft_result[:half_point]
+            
+                # Store fft_result_half in the dictionary
+                fft_results_dict[f'fft_result{i+1}'] = fft_result_half
+
 
                 # Plot original Tachogram
                 fig_orig = go.Figure()
