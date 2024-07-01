@@ -308,8 +308,8 @@ colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'pink']
 
 # Loop for 7 subsets
 for i in range(7):
-    start_index = i * 37
-    end_index = start_index + 37
+    start_index = i * 20
+    end_index = start_index + 20
 
     n_subset = n[start_index:end_index]
     bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
