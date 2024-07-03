@@ -331,7 +331,15 @@ for i in range(20):
 
  
     fft_results_dict[f'fft_result{i+1}'] = fft_result_half
+min_length = min(len(fft_result) for fft_result in fft_results_dict.values())
 
+# Truncate all FFT results to the minimum length
+for key in fft_results_dict:
+    fft_results_dict[key] = fft_results_dict[key][:min_length]
+
+# Average the FFT results
+FFT_TOTAL = sum(fft_results_dict[key] for key in fft_results_dict) / len(fft_results_dict)
+fft_freq_half = fft_freq_half[:min_length]  # Truncate frequency array to match
 # Frequency bands
 x_vlf = np.linspace(0.003, 0.04, 99)
 x_lf = np.linspace(0.04, 0.15, 99)
