@@ -245,7 +245,136 @@ for i in range(N):
         hasil_QRS[i-(T4+1)] = 5
     else:
         hasil_QRS[i-(T4+1)] = 0
+ptp = 0
+waktu = np.zeros(np.size(hasil_QRS))
+selisih = np.zeros(np.size(hasil_QRS))
+
+for n in range(np.size(hasil_QRS) - 1):
+    if hasil_QRS[n] < hasil_QRS[n + 1]:
+        waktu[ptp] = n / fs;
+        selisih[ptp] = waktu[ptp] - waktu[ptp - 1]
+        ptp += 1
+
+ptp = ptp - 1
+
+j = 0
+peak = np.zeros(np.size(hasil_QRS))
+for n in range(np.size(hasil_QRS)-1):
+    if hasil_QRS[n] == 5 and hasil_QRS[n-1] == 0:
+        peak[j] = n
+        j += 1
+
+temp = 0
+interval = np.zeros(np.size(hasil_QRS))
+BPM = np.zeros(np.size(hasil_QRS))
+
+for n in range(ptp):
+    interval[n] = (peak[n] - peak[n-1]) * (1/fs)
+    BPM[n] = 60 / interval[n]
+    temp = temp+BPM[n]
+    rata = temp / (n - 1)
+
+bpm_rr = np.zeros(ptp)
+for n in range (ptp):
+  bpm_rr[n] = 60/selisih[n]
+  if bpm_rr [n]>100:
+    bpm_rr[n]=rata
+n = np. arange(0,ptp,1,dtype=int)
+
+#normalisasi tachogram
+bpm_rr_baseline = bpm_rr -32
+
+# Plotting dengan Plotly
+n = np.arange(0, ptp, 1, dtype=int)
         
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+def fourier_transform(signal):
+    N = len(signal)
+    fft_result = np.zeros(N, dtype=complex)
+    for k in range(N):
+        for n in range(N):
+            fft_result[k] += signal[n] * np.exp(-2j * np.pi * k * n / N)
+    return fft_result
+
+def calculate_frequency(N, sampling_rate):
+    return np.arange(N) * sampling_rate / N
+
+sampling_rate = 1  
+
+fft_results_dict = {}
+
+# Define a list of colors
+colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'pink']
+
+# Loop for 10 subsets
+for i in range(20):
+    start_index = i * 10
+    end_index = start_index + 10
+
+    n_subset = n[start_index:end_index]
+    bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
+
+    M = len(bpm_rr_baseline_subset) - 1
+
+    hamming_window = np.zeros(M + 1)
+    for j in range(M + 1):
+        hamming_window[j] = 0.54 - 0.46 * np.cos(2 * np.pi * j / M)
+
+    bpm_rr_baseline_windowed = bpm_rr_baseline_subset * hamming_window
+
+    fft_result = fourier_transform(bpm_rr_baseline_windowed)
+    fft_freq = calculate_frequency(len(bpm_rr_baseline_windowed), sampling_rate)
+
+    half_point = len(fft_freq) // 2
+    fft_freq_half = fft_freq[:half_point]
+    fft_result_half = fft_result[:half_point]
+
+ 
+    fft_results_dict[f'fft_result{i+1}'] = fft_result_half
+
+    fig = make_subplots(rows=1, cols=3, subplot_titles=(
+        f" TACHOGRAM ",
+        f"Hamming Window ",
+        f"FFT "
+    ))
+
+
+    color = colors[i % len(colors)]
+
+    fig.add_trace(
+        go.Scatter(x=n_subset, y=bpm_rr_baseline_subset, mode='lines', name='Original Signal', line=dict(color=color)),
+        row=1, col=1
+    )
+
+
+    fig.add_trace(
+        go.Scatter(x=n_subset, y=bpm_rr_baseline_windowed, mode='lines', name='Windowed Signal', line=dict(color=color)),
+        row=1, col=2
+    )
+
+    # Plot FFT
+    fig.add_trace(
+        go.Scatter(x=fft_freq_half, y=np.abs(fft_result_half), mode="lines", line=dict(color=color)),
+        row=1, col=3
+    )
+
+
+    fig.update_layout(
+        title=f"TACHOGRAM and FFT (Subset {start_index}-{end_index-1})",
+        showlegend=False
+    )
+
+    fig.update_xaxes(title_text="n", row=1, col=1)
+    fig.update_yaxes(title_text="BPM", row=1, col=1)
+    fig.update_xaxes(title_text="n", row=1, col=2)
+    fig.update_yaxes(title_text="BPM", row=1, col=2)
+    fig.update_xaxes(title_text="Frequency (Hz)", row=1, col=3)
+    fig.update_yaxes(title_text="Magnitude", row=1, col=3)
+
+    fig.show()
 
 
 
@@ -692,6 +821,450 @@ if selected == "QRS Detection":
             
             # Show the figure
             st.plotly_chart(fig)
+
+if selected == "Frekuensi Domain": 
+        selected = st.sidebar.radio(
+        "",
+        ["RR Interval","Baseline", "Segmentation","Spektrum","RSA"],
+        index=0
+    )
+        if selected == "RR Interval":
+            data = {
+            "Calculation of HR": ["NUMBERS OF R TO R CALCULATIONS", "CALCULATION OF THE AMOUNT OF R", "BPM CALCULATIONS"],
+            "Hasil": [ptp, j, rata]
+        }
+            df = pd.DataFrame(data)
+        
+        # Buat tabel menggunakan Plotly
+            fig = go.Figure(data=[go.Table(
+            columnwidth=[80, 20],  # Set column width
+            header=dict(values=list(df.columns),
+                        fill_color='red',  # Ubah warna header menjadi merah
+                        align='left',
+                        line_color='darkslategray',
+                        height=30),  # Set header height
+            cells=dict(values=[df["Calculation of HR"], df["Hasil"]],
+                       fill_color='white',  # Ubah warna sel menjadi merah
+                       align='left',
+                       line_color='darkslategray',
+                       height=25,  # Set cell height
+                       font_size=12,  # Set font size
+                       ),
+        )])
+        
+            # Set layout to adjust the table size
+            fig.update_layout(
+                width=800,
+                height=200,
+                margin=dict(l=10, r=10, t=10, b=10)
+            )
+            
+            # Tampilkan tabel
+            st.plotly_chart(fig)
+        if selected == "Baseline":
+            fig = go.Figure(data=go.Scatter(x=n, y=bpm_rr, mode='lines'))
+            fig.update_layout(
+                title="TACHOGRAM",
+                xaxis_title="n",
+                yaxis_title="BPM",
+                xaxis=dict(showline=True, showgrid=True),
+                yaxis=dict(showline=True, showgrid=True)
+            )
+            st.plotly_chart(fig)
+            fig = go.Figure(data=go.Scatter(x=n, y=bpm_rr_baseline, mode='lines'))
+            fig.update_layout(
+                title="TACHOGRAM",
+                xaxis_title="n",
+                yaxis_title="BPM",
+                xaxis=dict(showline=True, showgrid=True),
+                yaxis=dict(showline=True, showgrid=True)
+            )
+            st.plotly_chart(fig)
+        if selected == "Segmentation":
+            def fourier_transform(signal):
+                N = len(signal)
+                fft_result = np.zeros(N, dtype=complex)
+                for k in range(N):
+                    for n in range(N):
+                        fft_result[k] += signal[n] * np.exp(-2j * np.pi * k * n / N)
+                return fft_result
+            
+            def calculate_frequency(N, sampling_rate):
+                return np.arange(N) * sampling_rate / N
+            
+            sampling_rate = 1  
+            
+            fft_results_dict = {}
+            
+            # Define a list of colors
+            colors = ['blue', 'red', 'green', 'purple', 'orange', 'brown', 'pink']
+            
+            # Loop for 10 subsets
+            for i in range(20):
+                start_index = i * 10
+                end_index = start_index + 10
+            
+                n_subset = n[start_index:end_index]
+                bpm_rr_baseline_subset = bpm_rr_baseline[start_index:end_index]
+            
+                M = len(bpm_rr_baseline_subset) - 1
+            
+                hamming_window = np.zeros(M + 1)
+                for j in range(M + 1):
+                    hamming_window[j] = 0.54 - 0.46 * np.cos(2 * np.pi * j / M)
+            
+                bpm_rr_baseline_windowed = bpm_rr_baseline_subset * hamming_window
+            
+                fft_result = fourier_transform(bpm_rr_baseline_windowed)
+                fft_freq = calculate_frequency(len(bpm_rr_baseline_windowed), sampling_rate)
+            
+                half_point = len(fft_freq) // 2
+                fft_freq_half = fft_freq[:half_point]
+                fft_result_half = fft_result[:half_point]
+            
+             
+                fft_results_dict[f'fft_result{i+1}'] = fft_result_half
+
+                fig = make_subplots(rows=1, cols=3, subplot_titles=(
+                    f" TACHOGRAM ",
+                    f"Hamming Window ",
+                    f"FFT "
+                ))
+            
+            
+                color = colors[i % len(colors)]
+            
+                fig.add_trace(
+                    go.Scatter(x=n_subset, y=bpm_rr_baseline_subset, mode='lines', name='Original Signal', line=dict(color=color)),
+                    row=1, col=1
+                )
+            
+            
+                fig.add_trace(
+                    go.Scatter(x=n_subset, y=bpm_rr_baseline_windowed, mode='lines', name='Windowed Signal', line=dict(color=color)),
+                    row=1, col=2
+                )
+            
+                # Plot FFT
+                fig.add_trace(
+                    go.Scatter(x=fft_freq_half, y=np.abs(fft_result_half), mode="lines", line=dict(color=color)),
+                    row=1, col=3
+                )
+                fig.update_layout(
+                    title=f"TACHOGRAM and FFT (Subset {start_index}-{end_index-1})",
+                    showlegend=False
+                )
+                fig.update_xaxes(title_text="n", row=1, col=1)
+                fig.update_yaxes(title_text="BPM", row=1, col=1)
+                fig.update_xaxes(title_text="n", row=1, col=2)
+                fig.update_yaxes(title_text="BPM", row=1, col=2)
+                fig.update_xaxes(title_text="Frequency (Hz)", row=1, col=3)
+                fig.update_yaxes(title_text="Magnitude", row=1, col=3)
+                st.plotly_chart(fig)
+        if selected == "Spektrum":
+                min_length = min(len(fft_result) for fft_result in fft_results_dict.values())
+
+                # Truncate all FFT results to the minimum length
+                for key in fft_results_dict:
+                    fft_results_dict[key] = fft_results_dict[key][:min_length]
+                
+                # Average the FFT results
+                FFT_TOTAL = sum(fft_results_dict[key] for key in fft_results_dict) / len(fft_results_dict)
+                fft_freq_half = fft_freq_half[:min_length]  # Truncate frequency array to match
+                
+                # Plot the averaged FFT result
+                fig_avg = go.Figure()
+                fig_avg.add_trace(
+                    go.Scatter(x=fft_freq_half, y=np.abs(FFT_TOTAL), mode="lines", line=dict(color='black'))
+                )
+                fig_avg.update_layout(
+                    title="Averaged FFT ",
+                    xaxis_title="Frequency (Hz)",
+                    yaxis_title="Magnitude",
+                    showlegend=False
+                )
+                st.title("Average FFT")
+                st.plotly_chart(fig_avg)
+                fig = go.Figure()
+
+                # Fill between VLF band
+                fig.add_trace(go.Scatter(
+                    x=x_vlf,
+                    y=y_vlf,
+                    fill='tozeroy',
+                    fillcolor='rgba(166, 81, 216, 0.2)',
+                    line=dict(color='rgba(166, 81, 216, 0.5)'),
+                    name='VLF'
+                ))
+                
+                # Fill between LF band
+                fig.add_trace(go.Scatter(
+                    x=x_lf,
+                    y=y_lf,
+                    fill='tozeroy',
+                    fillcolor='rgba(81, 166, 216, 0.2)',
+                    line=dict(color='rgba(81, 166, 216, 0.5)'),
+                    name='LF'
+                ))
+                
+                # Fill between HF band
+                fig.add_trace(go.Scatter(
+                    x=x_hf,
+                    y=y_hf,
+                    fill='tozeroy',
+                    fillcolor='rgba(216, 166, 81, 0.2)',
+                    line=dict(color='rgba(216, 166, 81, 0.5)'),
+                    name='HF'
+                ))
+                
+                # Add titles and labels
+                fig.update_layout(
+                    title="FFT Spectrum (Welch's periodogram)",
+                    xaxis_title="Frequency (Hz)",
+                    yaxis_title="Density",
+                    xaxis=dict(range=[0, 0.5]),
+                    yaxis=dict(range=[0, max(np.abs(FFT_TOTAL))]),
+                    legend=dict(x=0.8, y=0.95)
+                )
+                st.title("Frequency Spektrumr")
+                st.plotly_chart(fig)
+
+                def trapezoidal_rule(y, x):
+                    return np.sum((x[1:] - x[:-1]) * (y[1:] + y[:-1]) / 2)
+                
+                # Hitung Total Power (TP) menggunakan metode trapesium manual
+                TP = trapezoidal_rule(np.abs(FFT_TOTAL), fft_freq_half)
+                
+                # Hitung nilai VLF, LF, dan HF menggunakan metode trapesium manual
+                VLF = trapezoidal_rule(y_vlf, x_vlf)
+                LF = trapezoidal_rule(y_lf, x_lf)
+                HF = trapezoidal_rule(y_hf, x_hf)
+                
+                tp = VLF + LF + HF
+                # Hitung LF dan HF yang dinormalisasi
+                LF_norm = LF / (tp - VLF)
+                HF_norm = HF / (tp- VLF)
+                
+                
+                
+                LF_HF = LF / HF
+                
+                st.title("Frequency Domain Parameter")
+                # Buat DataFrame
+                data = {
+                    "Metric": ["Total Power (TP)", "VLF", "LF", "HF", "LF/HF"],
+                    "Value": [tp, VLF, LF_norm, HF_norm, LF_HF]
+                }
+                df = pd.DataFrame(data)
+                
+                # Buat tabel menggunakan Plotly
+                fig = go.Figure(data=[go.Table(
+                    header=dict(values=list(df.columns),
+                                fill_color='paleturquoise',
+                                align='left'),
+                    cells=dict(values=[df.Metric, df.Value],
+                               fill_color='lavender',
+                               align='left'))
+                ])
+                
+                # Tampilkan tabel
+                st.plotly_chart(fig)
+    
+                # Buat bar series
+                categories = ['Total Power (TP)', 'VLF', 'LF', 'HF']
+                values = [tp*10, VLF*10, LF_norm *100, HF_norm*100]
+                
+                # Buat plot batang
+                fig = go.Figure()
+                
+                fig.add_trace(go.Bar(
+                    x=categories,
+                    y=values,
+                    marker_color=['blue', 'orange', 'green', 'red']
+                ))
+                
+                # Menambahkan judul dan label sumbu
+                fig.update_layout(
+                    title='Bar Series dari VLF, LF, HF',
+                    xaxis_title='Kategori',
+                    yaxis_title='Nilai'
+                )
+                
+                st.plotly_chart(fig)
+                def determine_category(LF_norm, HF_norm, LF_HF):
+                    if LF_norm < 0.2 and HF_norm < 0.2:
+                        return 1  # Low - Low
+                    elif LF_norm >= 0.2 and LF_norm <= 0.6 and HF_norm < 0.2:
+                        return 2  # Normal - Low
+                    elif LF_norm > 0.6 and HF_norm < 0.2:
+                        return 3  # High - Low
+                    elif LF_norm < 0.2 and HF_norm >= 0.2 and HF_norm <= 0.6:
+                        return 4  # Low - Normal
+                    elif LF_norm >= 0.2 and LF_norm <= 0.6 and HF_norm >= 0.2 and HF_norm <= 0.6:
+                        return 5  # Normal - Normal
+                    elif LF_norm > 0.6 and HF_norm >= 0.2 and HF_norm <= 0.6:
+                        return 6  # High - Normal
+                    elif LF_norm < 0.2 and HF_norm > 0.6:
+                        return 7  # Low - High
+                    elif LF_norm >= 0.2 and LF_norm <= 0.6 and HF_norm > 0.6:
+                        return 8  # Normal - High
+                    elif LF_norm > 0.6 and HF_norm > 0.6:
+                        return 9  # High - High
+                    else:
+                        return 0  # Undefined
+                
+                
+                st.title("Autonomic Balance Diagram")
+                
+                category = determine_category(LF_norm, HF_norm, LF_HF)
+                st.write("Category:", category)
+                
+                
+                data = [
+                    [7, 8, 9],
+                    [4, 5, 6],
+                    [1, 2, 3]
+                 ]
+                
+                coordinates = {
+                    1: (2, 0),
+                    2: (2, 1),
+                    3: (2, 2),
+                    4: (1, 0),
+                    5: (1, 1),
+                    6: (1, 2),
+                    7: (0, 0),
+                    8: (0, 1),
+                    9: (0, 2)
+                  }
+        # Create heatmap with Plotly Express
+                fig = px.imshow(data, labels=dict(x="Sympathetic Level", y="Parasympathetic Level"), x=["Low", "Normal", "High"], y=["High", "Normal", "Low"])
+        
+        # Mark category on the heatmap
+                coord = coordinates.get(category, None)
+                if coord:
+                     fig.add_shape(
+                         type="circle",
+                         xref="x",
+                         yref="y",
+                         x0=coord[1],
+                         y0=coord[0],
+                         x1=coord[1] + 0.5,  
+                         y1=coord[0] + 0.5,  
+                        line_color="black"
+                    )
+        
+        
+        # Add annotations for numbers
+                annotations = []
+                for i, row in enumerate(data):
+                    for j, val in enumerate(row):
+                        annotations.append(dict(
+                        x=j, y=i, text=str(val), showarrow=False,
+                        font=dict(color="black", size=16)
+                        ))
+        
+                fig.update_layout(
+                title="Autonomic Balance Diagram",
+                annotations=annotations
+                )
+                fig.update_xaxes(ticks="outside", tickvals=[0, 1, 2])
+                fig.update_yaxes(ticks="outside", tickvals=[0, 1, 2])
+        
+        # Display heatmap in Streamlit
+                st.plotly_chart(fig)
+
+        if selected == 'RSA':
+                # Fungsi untuk interpolasi manual
+                def manual_interpolation(x, xp, fp):
+                    return np.interp(x, xp, fp)
+                
+                x_hf = np.linspace(0.15, 0.4, 99)
+                y_hf = manual_interpolation(x_hf, fft_freq_half, np.abs(FFT_TOTAL))
+                
+                # Buat plot spektrum FFT
+                fig = go.Figure()
+                
+                # Isi antara pita frekuensi HF
+                fig.add_trace(go.Scatter(
+                    x=x_hf,
+                    y=y_hf,
+                    fill='tozeroy',
+                    fillcolor='rgba(216, 166, 81, 0.2)',
+                    line=dict(color='rgba(216, 166, 81, 0.5)'),
+                    name='HF'
+                ))
+                
+                # Menambahkan judul dan label sumbu
+                fig.update_layout(
+                    title="HF",
+                    xaxis_title="Frequency (Hz)",
+                    yaxis_title="Density",
+                
+                )
+                
+                st.plotly_chart(fig)
+                
+
+# Fungsi untuk interpolasi manual
+                def manual_interpolation(x, xp, fp):
+                    return np.interp(x, xp, fp)
+                
+                # Rentang frekuensi yang diinginkan
+                x_hf = np.linspace(0.15, 0.4, 99)
+                y_hf = manual_interpolation(x_hf, fft_freq_half, np.abs(FFT_TOTAL))
+                
+                numerator = np.sum(x_hf * y_hf)  # Sum f_i * P_i
+                denominator = np.sum(y_hf)       # Sum P_i
+                
+                MPF = numerator / denominator 
+                st.write(f"Mean Power Frequency (MPF) : {MPF} Hz")
+                
+                # Mengalikan hasil MPF dengan 60
+                MPF_multiplied = MPF * 60
+                
+                st.write(f"Nilai Respiratory Rate: {MPF_multiplied} BPM")
+
+                
+                def manual_interpolation(x, xp, fp):
+                    return np.interp(x, xp, fp)
+                
+                # Define the HF frequency range
+                hf_range = (0.15, 0.4)
+                # Compute the FFT of the entire signal
+                fft_result = np.fft.fft(bpm_rr)
+                fft_freq = np.fft.fftfreq(len(bpm_rr), d=1/sampling_rate)
+                
+                half_point = len(fft_freq) // 2
+                fft_freq_half = fft_freq[:half_point]
+                fft_result_half = fft_result[:half_point]
+                
+                # Filter the frequency spectrum for the HF range
+                hf_spectrum = np.zeros_like(fft_result_half)
+                hf_indices = np.where((fft_freq_half >= hf_range[0]) & (fft_freq_half <= hf_range[1]))[0]
+                hf_spectrum[hf_indices] = fft_result_half[hf_indices]
+                
+                # Inverse FFT to get the time-domain signal
+                hf_signal = np.fft.ifft(hf_spectrum)
+                
+                # Create a time vector that extends to 200 seconds
+                time_vector = np.linspace(0, 200, num=len(hf_signal))
+                
+                # Plot the respiratory signal
+                fig_hf_signal = go.Figure()
+                fig_hf_signal.add_trace(go.Scatter(
+                    x=time_vector,
+                    y=np.real(hf_signal),
+                    mode='lines',
+                    name='HF Signal'
+                ))
+                
+                fig_hf_signal.update_layout(
+                    title="Respiratory Signal",
+                    xaxis_title="Time (s)",
+                    yaxis_title="Amplitude",
+                )
+                st.plotly_chart(fig_hf_signal)
 
 
 
