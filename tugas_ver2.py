@@ -287,9 +287,6 @@ bpm_rr_baseline = bpm_rr -32
 # Plotting dengan Plotly
 n = np.arange(0, ptp, 1, dtype=int)
         
-import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 def fourier_transform(signal):
     N = len(signal)
@@ -335,46 +332,36 @@ for i in range(20):
  
     fft_results_dict[f'fft_result{i+1}'] = fft_result_half
 
-    fig = make_subplots(rows=1, cols=3, subplot_titles=(
-        f" TACHOGRAM ",
-        f"Hamming Window ",
-        f"FFT "
-    ))
+# Frequency bands
+x_vlf = np.linspace(0.003, 0.04, 99)
+x_lf = np.linspace(0.04, 0.15, 99)
+x_hf = np.linspace(0.15, 0.4, 99)
 
+# Interpolation
+def manual_interpolation(x, xp, fp):
+    return np.interp(x, xp, fp)
 
-    color = colors[i % len(colors)]
+y_vlf = manual_interpolation(x_vlf, fft_freq_half, np.abs(FFT_TOTAL))
+y_lf = manual_interpolation(x_lf, fft_freq_half, np.abs(FFT_TOTAL))
+y_hf = manual_interpolation(x_hf, fft_freq_half, np.abs(FFT_TOTAL))
 
-    fig.add_trace(
-        go.Scatter(x=n_subset, y=bpm_rr_baseline_subset, mode='lines', name='Original Signal', line=dict(color=color)),
-        row=1, col=1
-    )
+def trapezoidal_rule(y, x):
+    return np.sum((x[1:] - x[:-1]) * (y[1:] + y[:-1]) / 2)
 
+# Hitung Total Power (TP) menggunakan metode trapesium manual
+TP = trapezoidal_rule(np.abs(FFT_TOTAL), fft_freq_half)
 
-    fig.add_trace(
-        go.Scatter(x=n_subset, y=bpm_rr_baseline_windowed, mode='lines', name='Windowed Signal', line=dict(color=color)),
-        row=1, col=2
-    )
+# Hitung nilai VLF, LF, dan HF menggunakan metode trapesium manual
+VLF = trapezoidal_rule(y_vlf, x_vlf)
+LF = trapezoidal_rule(y_lf, x_lf)
+HF = trapezoidal_rule(y_hf, x_hf)
 
-    # Plot FFT
-    fig.add_trace(
-        go.Scatter(x=fft_freq_half, y=np.abs(fft_result_half), mode="lines", line=dict(color=color)),
-        row=1, col=3
-    )
+tp = VLF + LF + HF
+# Hitung LF dan HF yang dinormalisasi
+LF_norm = LF / (tp - VLF)
+HF_norm = HF / (tp- VLF)
+LF_HF = LF / HF
 
-
-    fig.update_layout(
-        title=f"TACHOGRAM and FFT (Subset {start_index}-{end_index-1})",
-        showlegend=False
-    )
-
-    fig.update_xaxes(title_text="n", row=1, col=1)
-    fig.update_yaxes(title_text="BPM", row=1, col=1)
-    fig.update_xaxes(title_text="n", row=1, col=2)
-    fig.update_yaxes(title_text="BPM", row=1, col=2)
-    fig.update_xaxes(title_text="Frequency (Hz)", row=1, col=3)
-    fig.update_yaxes(title_text="Magnitude", row=1, col=3)
-
-    fig.show()
 
 
 
@@ -951,7 +938,7 @@ if selected == "Frekuensi Domain":
                     row=1, col=3
                 )
                 fig.update_layout(
-                    title=f"TACHOGRAM and FFT (Subset {start_index}-{end_index-1})",
+                    title=f" (Subset {start_index}-{end_index-1})",
                     showlegend=False
                 )
                 fig.update_xaxes(title_text="n", row=1, col=1)
